@@ -325,8 +325,8 @@ class TestStyleResolver:
         loaded_para = loaded_doc.paragraphs[0]
         spacing = resolver.get_line_spacing(loaded_para)
         
-        # Интервал может быть определён или нет в зависимости от реализации
-        assert spacing is None or spacing > 0
+        # Проверяем конкретное значение 1.5
+        assert spacing == 1.5
 
     def test_get_first_line_indent_cm(self, tmp_path):
         """Проверка получения отступа первой строки."""
@@ -343,8 +343,8 @@ class TestStyleResolver:
         indent = resolver.get_first_line_indent_cm(loaded_para)
         
         assert indent is not None
-        # Допускаем небольшую погрешность
-        assert 1.0 <= indent <= 1.5
+        # Ужесточённый допуск ±0.11 см
+        assert 1.14 <= indent <= 1.36
 
     def test_is_bold_explicit(self, tmp_path):
         """Проверка определения жирного шрифта (явное задание)."""
@@ -507,12 +507,13 @@ class TestIntegration:
                 alignment = resolver.get_alignment(block.paragraph)
                 # Не падаем с ошибкой
 
-    def test_style_inheritance_detection(self, tmp_path):
-        """Проверка наследования стилей."""
+    def test_style_inheritance_from_paragraph_style(self, tmp_path):
+        """Проверка наследования шрифта/кегля из стиля параграфа, если не задан в run."""
         doc = Document()
         
-        # Создаём параграф со стилем по умолчанию
+        # Создаём параграф со стилем по умолчанию (Normal)
         para = doc.add_paragraph("Текст со стилем Normal")
+        # Не задаём шрифт явно в run - он должен наследоваться из стиля
         
         path = save_doc(doc, tmp_path)
         loaded_doc = Document(str(path))
@@ -521,9 +522,39 @@ class TestIntegration:
         loaded_para = loaded_doc.paragraphs[0]
         if loaded_para.runs:
             loaded_run = loaded_para.runs[0]
-            # Резолвер должен уметь получать значения из цепочки стилей
+            # Шрифт может быть None если не задан ни в run, ни в стиле, ни в дефолтах
             font_name = resolver.get_font_name(loaded_run, loaded_para)
-            assert font_name is not None or font_name is None  # Может быть None если не задан явно
+            # Проверяем что резолвер работает без ошибок (значение может быть None)
+            assert font_name is None or isinstance(font_name, str)
+            
+            # Кегль должен наследоваться из дефолтов документа (обычно 11pt)
+            font_size = resolver.get_font_size_pt(loaded_run, loaded_para)
+            assert font_size is not None
+            assert font_size > 0
+
+    def test_style_inheritance_explicit_run_overrides_style(self, tmp_path):
+        """Проверка что явное задание в run переопределяет стиль параграфа."""
+        doc = Document()
+        
+        para = doc.add_paragraph("Текст с явным шрифтом")
+        run = para.runs[0]
+        # Явно задаём шрифт и размер в run
+        run.font.name = "Arial"
+        run.font.size = Pt(16)
+        
+        path = save_doc(doc, tmp_path)
+        loaded_doc = Document(str(path))
+        resolver = StyleResolver(loaded_doc)
+        
+        loaded_para = loaded_doc.paragraphs[0]
+        loaded_run = loaded_para.runs[0]
+        
+        # Должны получить значения из run, а не из стиля
+        font_name = resolver.get_font_name(loaded_run, loaded_para)
+        assert font_name == "Arial"
+        
+        font_size = resolver.get_font_size_pt(loaded_run, loaded_para)
+        assert font_size == 16.0
 
     def test_real_fixture_files(self):
         """Тесты на реальных файлах фикстур."""
@@ -569,6 +600,13 @@ class TestParameterized:
         
         assert model.doc is not None
         assert len(model.doc.sections) == 1
+        
+        # Проверка реальных значений полей через sections[0]
+        loaded_section = model.doc.sections[0]
+        assert abs(loaded_section.left_margin.cm - left) < 0.05
+        assert abs(loaded_section.right_margin.cm - right) < 0.05
+        assert abs(loaded_section.top_margin.cm - top) < 0.05
+        assert abs(loaded_section.bottom_margin.cm - bottom) < 0.05
 
     @pytest.mark.parametrize("font_size", [10, 12, 14, 16])
     def test_different_font_sizes(self, tmp_path, font_size):
@@ -585,7 +623,7 @@ class TestParameterized:
         loaded_run = loaded_para.runs[0]
         
         size = resolver.get_font_size_pt(loaded_run, loaded_para)
-        assert size is not None or size is None  # Зависит от реализации
+        assert size == float(font_size)
 
     @pytest.mark.parametrize("alignment_enum,alignment_name", [
         (WD_ALIGN_PARAGRAPH.LEFT, "left"),

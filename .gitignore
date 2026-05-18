@@ -1,1 +1,43 @@
-Nothing needs to be added to .gitignore since the only change is adding a test Python file (`tests/test_parser_style_resolver.py`), which is source code and should not be ignored.
+```
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Tests
+.pytest_cache/
+.coverage
+coverage/
+htmlcov/
+
+# Logs
+*.log
+
+# Environment
+.env
+.env.local
+.env.*
+
+# Editors
+.vscode/
+.idea/
+*.swp
+*.swo
+*.tmp
+
+# Dependencies
+.venv/
+venv/
+.mypy_cache/
+
+# Build artifacts
+dist/
+build/
+target/
+.gradle/
+
+# OS
+.DS_Store
+Thumbs.db
+```
