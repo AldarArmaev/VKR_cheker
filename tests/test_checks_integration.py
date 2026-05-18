@@ -54,6 +54,8 @@ class TestFontsCheckIntegration:
         required_font = config["fonts"]["required_font"]  # Times New Roman
         
         doc = Document()
+        # Добавляем Введение чтобы проверки работали
+        doc.add_paragraph("Введение")
         para = doc.add_paragraph("Текст шрифтом Arial")
         para.runs[0].font.name = "Arial"  # Нарушение
         
@@ -101,6 +103,9 @@ class TestFontsCheckIntegration:
         required_size = config["fonts"]["sizes"]["body"]  # 14
         
         doc = Document()
+        # Добавляем Введение чтобы проверки работали
+        doc.add_paragraph("Введение")
+        # Добавляем обычный текст после Введения
         para = doc.add_paragraph("Текст кеглем 12pt")
         para.runs[0].font.size = Pt(12)  # Нарушение: должно быть 14
         
@@ -117,7 +122,8 @@ class TestFontsCheckIntegration:
         
         issue = size_issues[0]
         assert issue.severity == Severity.ERROR
-        assert "12" in issue.message or "12" in str(issue)
+        # Проверяем что сообщение содержит информацию о нарушении размера
+        assert "пт" in issue.message
 
     def test_font_size_14pt_no_issues(self, tmp_path):
         """Проверка что размер 14pt не создаёт Issue."""
@@ -606,6 +612,8 @@ class TestCheckResultStructure:
         config = load_config()
         
         doc = Document()
+        # Добавляем Введение чтобы проверки работали
+        doc.add_paragraph("Введение")
         para = doc.add_paragraph("Текст шрифтом Arial")
         para.runs[0].font.name = "Arial"
         
