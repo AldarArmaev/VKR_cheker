@@ -8,6 +8,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+import yaml
 
 import pytest
 from docx import Document
@@ -19,6 +20,13 @@ from vkr_checker.style_resolver import StyleResolver
 
 
 FIXTURES = Path(__file__).parent / "fixtures"
+CONFIG_PATH = Path(__file__).parent.parent / "config" / "rules.yaml"
+
+
+def load_config() -> dict:
+    """Загружает конфигурацию из rules.yaml."""
+    with open(CONFIG_PATH, "r", encoding="utf-8") as f:
+        return yaml.safe_load(f)
 
 
 def save_doc(doc: Document, tmp_path: Path, name: str = "test.docx") -> Path:
