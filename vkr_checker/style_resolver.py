@@ -215,35 +215,43 @@ class StyleResolver:
             return defaults
 
         rpr_default = doc_defaults.find(f".//{{{_NS}}}rPrDefault//{{{_NS}}}rPr")
-        if rpr_default is None:
-            return defaults
+        if rpr_default is not None:
+            # Шрифт
+            r_fonts = rpr_default.find(f"{{{_NS}}}rFonts")
+            if r_fonts is not None:
+                defaults["font_name"] = (
+                    r_fonts.get(f"{{{_NS}}}ascii")
+                    or r_fonts.get(f"{{{_NS}}}hAnsi")
+                )
 
-        # Шрифт
-        r_fonts = rpr_default.find(f"{{{_NS}}}rFonts")
-        if r_fonts is not None:
-            defaults["font_name"] = (
-                r_fonts.get(f"{{{_NS}}}ascii")
-                or r_fonts.get(f"{{{_NS}}}hAnsi")
-            )
+            # Размер (в half-points)
+            sz = rpr_default.find(f"{{{_NS}}}sz")
+            if sz is not None:
+                val = sz.get(f"{{{_NS}}}val")
+                if val:
+                    defaults["font_size_half_pt"] = int(val)
 
-        # Размер (в half-points)
-        sz = rpr_default.find(f"{{{_NS}}}sz")
-        if sz is not None:
-            val = sz.get(f"{{{_NS}}}val")
-            if val:
-                defaults["font_size_half_pt"] = int(val)
+            # Жирность
+            b = rpr_default.find(f"{{{_NS}}}b")
+            if b is not None:
+                val = b.get(f"{{{_NS}}}val")
+                defaults["bold"] = val != "false"
 
-        # Жирность
-        b = rpr_default.find(f"{{{_NS}}}b")
-        if b is not None:
-            val = b.get(f"{{{_NS}}}val")
-            defaults["bold"] = val != "false"
+            # Курсив
+            i = rpr_default.find(f"{{{_NS}}}i")
+            if i is not None:
+                val = i.get(f"{{{_NS}}}val")
+                defaults["italic"] = val != "false"
 
-        # Курсив
-        i = rpr_default.find(f"{{{_NS}}}i")
-        if i is not None:
-            val = i.get(f"{{{_NS}}}val")
-            defaults["italic"] = val != "false"
+        # Читаем pPrDefault для межстрочного интервала по умолчанию
+        ppr_default = doc_defaults.find(f".//{{{_NS}}}pPrDefault//{{{_NS}}}pPr")
+        if ppr_default is not None:
+            spacing = ppr_default.find(f"{{{_NS}}}spacing")
+            if spacing is not None:
+                line = spacing.get(f"{{{_NS}}}line")
+                rule = spacing.get(f"{{{_NS}}}lineRule")
+                if rule in ("auto", None) and line:
+                    defaults["line_spacing"] = round(int(line) / 240, 2)
 
         return defaults
 
@@ -261,7 +269,8 @@ class StyleResolver:
                         if rule in ("auto", None) and line:
                             return round(int(line) / 240, 2)
             style = style.base_style
-        return None
+        # Если в стилях не найдено, пробуем взять из document defaults
+        return self._defaults.get("line_spacing")
 
     def _get_style_alignment(self, para: Paragraph) -> str | None:
         """Читает выравнивание из цепочки стилей."""
