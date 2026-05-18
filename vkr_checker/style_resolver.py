@@ -18,6 +18,18 @@ from docx.text.run import Run
 
 _NS = "http://schemas.openxmlformats.org/wordprocessingml/2006/main"
 
+# Маппинг кодов тем Office к названиям шрифтов по умолчанию
+THEME_FONT_MAP = {
+    "+mjLatin": "Times New Roman",   # major latin — заголовочный шрифт темы
+    "+mnLatin": "Calibri",           # minor latin — основной шрифт темы
+    "+mjEastAsia": "MS Mincho",      # major east asia
+    "+mnEastAsia": "MS Gothic",      # minor east asia
+    "+mjHAnsi": "Times New Roman",   # major high ANSI
+    "+mnHAnsi": "Calibri",           # minor high ANSI
+    "+mjCS": "Times New Roman",      # major complex script
+    "+mnCS": "Calibri",              # minor complex script
+}
+
 
 class StyleResolver:
     """Кэшированный резолвер стилей для одного документа."""
@@ -41,10 +53,13 @@ class StyleResolver:
         while style:
             if style.font.name:
                 name = style.font.name
-                # Обработка кодов темы типа +mn-EA, +mn-CS и т.д.
+                # Обработка кодов темы типа +mnLatin, +mjLatin и т.д.
                 if name and "+" in name:
-                    # Это код темы — не резолвим, возвращаем как есть
-                    # или считаем нарушением (зависит от требований)
+                    # Резолвим код темы через таблицу маппинга
+                    resolved_font = THEME_FONT_MAP.get(name)
+                    if resolved_font:
+                        return resolved_font
+                    # Если код темы неизвестен, возвращаем None (будет предупреждение)
                     return None
                 return name
             style = style.base_style

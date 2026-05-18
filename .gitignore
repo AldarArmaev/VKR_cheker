@@ -1,1 +1,16 @@
-Nothing should be ignored based on the provided file changes. The only modified file is a Python source file (`vkr_checker/checks/fonts.py`), which should not be ignored.
+```
+# Python cache files
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Logs and temp files
+*.log
+*.tmp
+
+# Environment files
+.env
+.env.local
+*.env.*
+```
