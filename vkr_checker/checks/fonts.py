@@ -156,7 +156,7 @@ class FontsCheck(BaseCheck):
                 continue
 
             for run in para.runs:
-                if run.bold and run.text.strip():
+                if resolver.is_bold(run, para) and run.text.strip():
                     if i - last_bold_issue >= 5:
                         add_issue(
                             result,
