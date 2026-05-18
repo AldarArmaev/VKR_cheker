@@ -95,38 +95,33 @@ def iter_blocks(doc: Document) -> Iterator[BlockItem]:
     - w:p (параграфы)
     - w:tbl (таблицы) — с вложенным циклом по строкам (w:tr) и ячейкам (w:tc)
     """
+    # Построить индексы один раз: O(n)
+    para_map = {id(p._p): p for p in doc.paragraphs}
+    table_map = {id(t._tbl): t for t in doc.tables}
+    
     idx = 0
     # Элементы верхнего уровня тела документа
     for child in doc.element.body:
         tag = child.tag.split("}")[-1] if "}" in child.tag else child.tag
-        if tag == "p":
-            # Найти соответствующий Paragraph объект
-            para = _find_paragraph_by_element(doc, child)
-            if para is not None:
-                yield BlockItem(index=idx, kind="paragraph", paragraph=para)
-                idx += 1
-        elif tag == "tbl":
-            # Это таблица — обрабатываем её целиком
-            table = _find_table_by_element(doc, child)
-            if table is not None:
-                yield BlockItem(index=idx, kind="table", table=table)
-                idx += 1
+        elem_id = id(child)
+        if tag == "p" and elem_id in para_map:
+            yield BlockItem(index=idx, kind="paragraph", paragraph=para_map[elem_id])
+            idx += 1
+        elif tag == "tbl" and elem_id in table_map:
+            yield BlockItem(index=idx, kind="table", table=table_map[elem_id])
+            idx += 1
 
 
 def _find_paragraph_by_element(doc: Document, elem) -> Paragraph | None:
-    """Найти объект Paragraph по его XML элементу."""
-    for p in doc.paragraphs:
-        if p._p is elem:
-            return p
-    return None
+    """Найти объект Paragraph по его XML элементу через индекс."""
+    para_map = {id(p._p): p for p in doc.paragraphs}
+    return para_map.get(id(elem))
 
 
 def _find_table_by_element(doc: Document, elem) -> Table | None:
-    """Найти объект Table по его XML элементу."""
-    for t in doc.tables:
-        if t._tbl is elem:
-            return t
-    return None
+    """Найти объект Table по его XML элементу через индекс."""
+    table_map = {id(t._tbl): t for t in doc.tables}
+    return table_map.get(id(elem))
 
 
 def _detect_sections(
