@@ -66,7 +66,7 @@ class FontsCheck(BaseCheck):
         last_size_issue_para = -10
 
         for i, para in enumerate(model.paragraphs):
-            if not para.text.strip():
+            if i < model.intro_start_idx:
                 continue
             if para_is_in_table(para):
                 continue  # таблицы проверяются отдельно
