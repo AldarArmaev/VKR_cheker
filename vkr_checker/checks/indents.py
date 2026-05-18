@@ -14,6 +14,15 @@ class IndentsCheck(BaseCheck):
         body_indent = rules["body_first_line"]
         tol = rules.get("tolerance", 0.1)
 
+        # Проверяем наличие раздела «Введение» — без него проверки невозможны
+        if model.intro_start_idx < 0:
+            result.skipped = True
+            result.skip_reason = (
+                "Раздел «Введение» не найден. "
+                "Проверка отступов требует наличия этого раздела."
+            )
+            return
+
         in_main_text = False
         last_issue_para = -10
 

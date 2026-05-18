@@ -14,6 +14,15 @@ class SpacingCheck(BaseCheck):
         body_spacing = rules["body"]
         tol = rules.get("tolerance", 0.05)
 
+        # Проверяем наличие раздела «Введение» — без него проверки невозможны
+        if model.intro_start_idx < 0:
+            result.skipped = True
+            result.skip_reason = (
+                "Раздел «Введение» не найден. "
+                "Проверка интервалов требует наличия этого раздела."
+            )
+            return
+
         in_main_text = False
         last_issue_para = -10
 
@@ -23,6 +32,7 @@ class SpacingCheck(BaseCheck):
             # Начало основного текста — с Введения
             if re.match(r"^Введение$", text, re.IGNORECASE):
                 in_main_text = True
+                continue  # Пропускаем сам заголовок "Введение"
 
             if not in_main_text:
                 continue
@@ -32,8 +42,23 @@ class SpacingCheck(BaseCheck):
                 continue  # таблицы проверяются отдельно
 
             spacing = resolver.get_line_spacing(para)
+            
+            # Если интервал не задан (None), это может быть нарушением
+            # По умолчанию в Word используется одинарный интервал (1.0)
             if spacing is None:
-                continue  # не можем определить — пропускаем
+                # Пропускаем или считаем предупреждением
+                # Добавим предупреждение о невозможности определить интервал
+                if i - last_issue_para >= 5:
+                    add_issue(
+                        result,
+                        rule_id="line_spacing_undefined",
+                        message="Не удалось определить межстрочный интервал",
+                        severity=Severity.WARNING,
+                        location_hint=f"~абз. {i+1}",
+                        context=text[:80],
+                    )
+                    last_issue_para = i
+                continue
 
             if abs(spacing - body_spacing) > tol:
                 if i - last_issue_para >= 5:

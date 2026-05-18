@@ -40,7 +40,13 @@ class StyleResolver:
         style = para.style
         while style:
             if style.font.name:
-                return style.font.name
+                name = style.font.name
+                # Обработка кодов темы типа +mn-EA, +mn-CS и т.д.
+                if name and "+" in name:
+                    # Это код темы — не резолвим, возвращаем как есть
+                    # или считаем нарушением (зависит от требований)
+                    return None
+                return name
             style = style.base_style
 
         # 3. Дефолты документа

@@ -51,6 +51,15 @@ class FontsCheck(BaseCheck):
         required_font = self.rules["fonts"]["required_font"]
         required_size = self.rules["fonts"]["sizes"]["body"]
 
+        # Проверяем наличие раздела «Введение» — без него проверки невозможны
+        if model.intro_start_idx < 0:
+            result.skipped = True
+            result.skip_reason = (
+                "Раздел «Введение» не найден. "
+                "Проверка шрифтов требует наличия этого раздела."
+            )
+            return
+
         wrong_font_count = 0
         wrong_size_count = 0
         last_font_issue_para = -10
@@ -70,7 +79,20 @@ class FontsCheck(BaseCheck):
                 font_size = resolver.get_font_size_pt(run, para)
 
                 # Проверка шрифта
-                if font_name and font_name != required_font:
+                # Если font_name is None (код темы), считаем это нарушением
+                if font_name is None:
+                    # Шрифт не определён или код темы — предупреждение
+                    if i - last_font_issue_para >= 3:
+                        add_issue(
+                            result,
+                            rule_id="font_undefined",
+                            message="Шрифт не определён (возможно, наследуется из темы)",
+                            severity=Severity.WARNING,
+                            location_hint=f"~абз. {i+1}",
+                            context=para.text[:80],
+                        )
+                        last_font_issue_para = i
+                elif font_name != required_font:
                     wrong_font_count += 1
                     if i - last_font_issue_para >= 3:  # дедупликация
                         add_issue(

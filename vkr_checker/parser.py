@@ -46,9 +46,16 @@ class DocumentModel:
     intro_end_idx: int = -1          # индекс параграфа конца Введения
 
 
-def load_document(path: str | Path) -> DocumentModel:
+def load_document(
+    path: str | Path,
+    rules: dict | None = None,
+) -> DocumentModel:
     """
     Загружает DOCX и строит DocumentModel.
+
+    Args:
+        path: путь к файлу
+        rules: правила для детекции разделов (опционально)
 
     Raises:
         FileNotFoundError: если файл не найден
@@ -64,7 +71,7 @@ def load_document(path: str | Path) -> DocumentModel:
     blocks = list(iter_blocks(doc))
     paragraphs = [b.paragraph for b in blocks if b.kind == "paragraph"]
     tables = [b.table for b in blocks if b.kind == "table"]
-    sections = _detect_sections(paragraphs)
+    sections = _detect_sections(paragraphs, rules)
     intro_start, intro_end = _find_intro_bounds(paragraphs, sections)
 
     return DocumentModel(
@@ -122,17 +129,21 @@ def _find_table_by_element(doc: Document, elem) -> Table | None:
     return None
 
 
-def _detect_sections(paragraphs: list[Paragraph]) -> list[SectionInfo]:
+def _detect_sections(
+    paragraphs: list[Paragraph],
+    rules: dict | None = None,
+) -> list[SectionInfo]:
     """Определяет разделы документа по тексту заголовков."""
-    import yaml
-    from pathlib import Path as P
+    if rules is None:
+        import yaml
+        from pathlib import Path as P
 
-    rules_path = P("config/rules.yaml")
-    if not rules_path.exists():
-        rules_path = P(__file__).parent.parent / "config" / "rules.yaml"
+        rules_path = P("config/rules.yaml")
+        if not rules_path.exists():
+            rules_path = P(__file__).parent.parent / "config" / "rules.yaml"
 
-    with open(rules_path, encoding="utf-8") as f:
-        rules = yaml.safe_load(f)
+        with open(rules_path, encoding="utf-8") as f:
+            rules = yaml.safe_load(f)
 
     section_patterns = rules.get("required_sections", [])
     found = []
@@ -167,4 +178,6 @@ def _find_intro_bounds(
             next_major_idx = sec.paragraph_index
             break
 
+    # Если «Введение» не найдено, возвращаем -1, что сигнализирует об ошибке
+    # Проверки будут пропущены или выдадут предупреждение
     return intro_idx, next_major_idx
