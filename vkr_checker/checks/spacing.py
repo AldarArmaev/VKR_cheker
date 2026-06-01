@@ -43,21 +43,9 @@ class SpacingCheck(BaseCheck):
 
             spacing = resolver.get_line_spacing(para)
             
-            # Если интервал не задан (None), это может быть нарушением
-            # По умолчанию в Word используется одинарный интервал (1.0)
+            # Если интервал не определён (None), просто пропускаем параграф
+            # без добавления предупреждения (исправление бага №4)
             if spacing is None:
-                # Пропускаем или считаем предупреждением
-                # Добавим предупреждение о невозможности определить интервал
-                if i - last_issue_para >= 5:
-                    add_issue(
-                        result,
-                        rule_id="line_spacing_undefined",
-                        message="Не удалось определить межстрочный интервал",
-                        severity=Severity.WARNING,
-                        location_hint=f"~абз. {i+1}",
-                        context=text[:80],
-                    )
-                    last_issue_para = i
                 continue
 
             if abs(spacing - body_spacing) > tol:
