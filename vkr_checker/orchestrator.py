@@ -14,10 +14,13 @@ from .checks.margins import MarginsCheck
 from .checks.fonts import FontsCheck
 from .checks.spacing import SpacingCheck
 from .checks.indents import IndentsCheck
+from .checks.alignment import AlignmentCheck
+from .checks.page_numbers import PageNumbersCheck
 from .checks.heading_styles import HeadingStylesCheck
 from .checks.sections import SectionsCheck
 from .checks.intro import IntroCheck
 from .checks.tables import TablesCheck
+from .checks.figures import FiguresCheck
 from .checks.bibliography import BibliographyCheck
 
 @dataclass
@@ -78,15 +81,20 @@ def run_checks(
 
     # Порядок важен: сначала структурные, потом детальные
     check_classes = [
+        # Структурные проверки
         MarginsCheck,
         HeadingStylesCheck,
-        SectionsCheck,  # проверка наличия разделов
-        IntroCheck,  # проверка структуры Введения
+        SectionsCheck,
+        IntroCheck,
+        # Детальные проверки
         FontsCheck,
         SpacingCheck,
         IndentsCheck,
-        TablesCheck,  # опционально
-        BibliographyCheck,  # проверка списка литературы
+        AlignmentCheck,
+        PageNumbersCheck,
+        TablesCheck,
+        FiguresCheck,
+        BibliographyCheck,
     ]
 
     report = Report(
