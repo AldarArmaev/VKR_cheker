@@ -110,32 +110,6 @@ def run_checks(
     return report
 
 
-def print_report(report: Report) -> None:
-    """Выводит отчёт в консоль."""
-    print("\n" + "=" * 60)
-    print(f"Отчёт по документу: {report.document_name}")
-    print("=" * 60)
-    
-    for result in report.results:
-        if result.skipped:
-            print(f"\n[{result.check_name}] ПРОПУЩЕНО: {result.skip_reason}")
-            continue
-        
-        status = "✓" if result.passed else "✗"
-        print(f"\n[{result.check_name}] {status}")
-        
-        if result.issues:
-            for issue in result.issues:
-                print(f"  {issue}")
-    
-    print("\n" + "=" * 60)
-    print(f"Проверок пройдено: {report.checks_passed}/{report.checks_total}")
-    print(f"Всего ошибок: {report.total_errors}")
-    print(f"Всего предупреждений: {report.total_warnings}")
-    print(f"Вердикт: {report.verdict}")
-    print("=" * 60 + "\n")
-
-
 def main() -> int:
     """Точка входа CLI."""
     if len(sys.argv) < 2:
@@ -146,6 +120,7 @@ def main() -> int:
     docx_path = sys.argv[1]
     
     try:
+        from .reporters.console_reporter import print_report
         report = run_checks(docx_path)
         print_report(report)
         return 0 if report.total_errors == 0 else 1
