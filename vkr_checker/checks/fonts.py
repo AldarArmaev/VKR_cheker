@@ -51,14 +51,11 @@ class FontsCheck(BaseCheck):
         required_font = self.rules["fonts"]["required_font"]
         required_size = self.rules["fonts"]["sizes"]["body"]
 
-        # Проверяем наличие раздела «Введение» — без него проверки невозможны
+        # Если Введение не найдено, проверять весь документ
         if model.intro_start_idx < 0:
-            result.skipped = True
-            result.skip_reason = (
-                "Раздел «Введение» не найден. "
-                "Проверка шрифтов требует наличия этого раздела."
-            )
-            return
+            start_idx = 0  # проверять весь документ
+        else:
+            start_idx = model.intro_start_idx
 
         wrong_font_count = 0
         wrong_size_count = 0
@@ -66,7 +63,7 @@ class FontsCheck(BaseCheck):
         last_size_issue_para = -10
 
         for i, para in enumerate(model.paragraphs):
-            if i < model.intro_start_idx:
+            if i < start_idx:
                 continue
             if para_is_in_table(para):
                 continue  # таблицы проверяются отдельно
