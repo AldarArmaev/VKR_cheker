@@ -18,6 +18,7 @@ from .checks.heading_styles import HeadingStylesCheck
 from .checks.sections import SectionsCheck
 from .checks.intro import IntroCheck
 from .checks.tables import TablesCheck
+from .checks.bibliography import BibliographyCheck
 
 @dataclass
 class Report:
@@ -85,6 +86,7 @@ def run_checks(
         SpacingCheck,
         IndentsCheck,
         TablesCheck,  # опционально
+        BibliographyCheck,  # проверка списка литературы
     ]
 
     report = Report(
