@@ -1,0 +1,25 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.backends.legacy:build"
+
+[project]
+name = "vkr-checker"
+version = "1.0.0"
+description = "Автоматическая проверка оформления ВКР"
+requires-python = ">=3.11"
+dependencies = [
+    "python-docx>=1.1.0",
+    "lxml>=5.0.0",
+    "PyYAML>=6.0",
+    "jinja2>=3.1",
+    "click>=8.1",
+    "rich>=13.0",
+]
+
+[project.scripts]
+vkr-check = "vkr_checker.cli:main"
+
+[project.optional-dependencies]
+gui = []  # tkinter входит в стандартную библиотеку
+build = ["pyinstaller>=6.0"]
+test = ["pytest>=7.0", "pytest-cov>=4.0"]
