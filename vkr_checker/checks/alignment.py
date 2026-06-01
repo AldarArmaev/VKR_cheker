@@ -54,7 +54,8 @@ class AlignmentCheck(BaseCheck):
                 next_is_table_title = False
                 continue
 
-            actual_align = resolver.get_alignment(para)
+            actual_align_str = resolver.get_alignment(para)
+            actual_align = ALIGN_CODES.get(actual_align_str)
 
             # Строка "Таблица N"
             if TABLE_NUMBER_RE.match(text):
