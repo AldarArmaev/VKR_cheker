@@ -14,11 +14,12 @@ __pycache__/
 .env.local
 *.env.*
 
-# Editors
-.vscode/
-.idea/
+# Coverage
+.coverage
+coverage/
+htmlcov/
 
-# Dependencies
-.venv/
-venv/
+# Testing
+.pytest_cache/
+.mypy_cache/
 ```
