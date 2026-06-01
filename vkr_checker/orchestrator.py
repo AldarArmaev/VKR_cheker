@@ -14,6 +14,7 @@ from .checks.margins import MarginsCheck
 from .checks.fonts import FontsCheck
 from .checks.spacing import SpacingCheck
 from .checks.indents import IndentsCheck
+from .checks.heading_styles import HeadingStylesCheck
 
 
 @dataclass
@@ -75,6 +76,7 @@ def run_checks(
     # Порядок важен: сначала структурные, потом детальные
     check_classes = [
         MarginsCheck,
+        HeadingStylesCheck,
         FontsCheck,
         SpacingCheck,
         IndentsCheck,

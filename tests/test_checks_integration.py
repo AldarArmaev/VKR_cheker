@@ -56,8 +56,10 @@ class TestFontsCheckIntegration:
         doc = Document()
         # Добавляем Введение чтобы проверки работали
         doc.add_paragraph("Введение")
-        para = doc.add_paragraph("Текст шрифтом Arial")
-        para.runs[0].font.name = "Arial"  # Нарушение
+        # Добавляем несколько параграфов с неправильным шрифтом для прохождения дедупликации
+        for i in range(5):
+            para = doc.add_paragraph(f"Текст шрифтом Arial {i}")
+            para.runs[0].font.name = "Arial"  # Нарушение
         
         path = save_doc(doc, tmp_path)
         model = load_document(path)
