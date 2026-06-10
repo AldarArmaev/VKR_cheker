@@ -48,14 +48,20 @@ class SpacingCheck(BaseCheck):
             if spacing is None:
                 continue
 
-            if abs(spacing - body_spacing) > tol:
+            # Определяем ожидаемый интервал для специальных случаев
+            if text.startswith("Условные обозначения:"):
+                expected_spacing = 1.0
+            else:
+                expected_spacing = body_spacing
+
+            if abs(spacing - expected_spacing) > tol:
                 if i - last_issue_para >= 5:
                     add_issue(
                         result,
                         rule_id="line_spacing",
                         message=(
                             f"Межстрочный интервал {spacing:.2f} "
-                            f"(требуется {body_spacing})"
+                            f"(требуется {expected_spacing})"
                         ),
                         severity=Severity.ERROR,
                         location_hint=f"~абз. {i+1}",

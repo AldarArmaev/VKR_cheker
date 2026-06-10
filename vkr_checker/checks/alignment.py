@@ -3,8 +3,8 @@ from __future__ import annotations
 import re
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 from .base import BaseCheck, CheckResult, Severity, add_issue
-from .fonts import is_heading_paragraph, para_is_in_table
-
+from .fonts import para_is_in_table
+from docx.oxml.ns import qn
 
 ALIGN_NAMES = {
     WD_ALIGN_PARAGRAPH.JUSTIFY: "по ширине",
@@ -80,7 +80,7 @@ class AlignmentCheck(BaseCheck):
                 continue
 
             # Заголовки глав/параграфов
-            if is_heading_paragraph(para):
+            if is_heading_for_alignment(text, para, resolver):
                 self._check_align(result, i, para, actual_align,
                                   chapter_align, "заголовок")
                 continue
@@ -118,3 +118,37 @@ class AlignmentCheck(BaseCheck):
                 location_hint=f"~абз. {i+1}",
                 context=para.text[:80],
             )
+
+def is_real_heading_for_alignment(text: str, para) -> bool:
+    if re.match(r"^Глава\s+\d+", text):
+        return True
+    if re.match(r"^\d+\.\d+(\.\d+)*\.", text):
+        return True
+    if re.match(r"^Выводы по главе", text):
+        return True
+    if re.match(r"^Введение$", text, re.IGNORECASE):
+        return True
+    if re.match(r"^Заключение$", text, re.IGNORECASE):
+        return True
+    if re.match(r"^Список литературы$", text, re.IGNORECASE):
+        return True
+    if re.match(r"^Содержание$", text, re.IGNORECASE):
+        return True
+    return False
+
+
+def is_numbered_paragraph(para) -> bool:
+    pPr = para._p.find(qn("w:pPr"))
+    if pPr is None:
+        return False
+    return pPr.find(qn("w:numPr")) is not None
+
+
+def is_heading_for_alignment(text: str, para, resolver) -> bool:
+    if is_real_heading_for_alignment(text):
+        return True
+
+    if is_numbered_paragraph(para) and resolver.get_alignment(para) == "center":
+        return True
+
+    return False

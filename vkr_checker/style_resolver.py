@@ -22,8 +22,6 @@ _NS = "http://schemas.openxmlformats.org/wordprocessingml/2006/main"
 THEME_FONT_MAP = {
     "+mjLatin": "Times New Roman",   # major latin — заголовочный шрифт темы
     "+mnLatin": "Calibri",           # minor latin — основной шрифт темы
-    "+mjEastAsia": "MS Mincho",      # major east asia
-    "+mnEastAsia": "MS Gothic",      # minor east asia
     "+mjHAnsi": "Times New Roman",   # major high ANSI
     "+mnHAnsi": "Calibri",           # minor high ANSI
     "+mjCS": "Times New Roman",      # major complex script

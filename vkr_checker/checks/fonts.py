@@ -1,3 +1,4 @@
+
 """
 Проверка шрифта и кегля.
 
@@ -68,6 +69,8 @@ class FontsCheck(BaseCheck):
             if para_is_in_table(para):
                 continue  # таблицы проверяются отдельно
 
+            text = para.text.strip()
+
             for run in para.runs:
                 if not run.text.strip():
                     continue
@@ -107,7 +110,13 @@ class FontsCheck(BaseCheck):
                     break  # один issue на параграф
 
                 # Проверка кегля (только для основного текста)
-                if font_size and abs(font_size - required_size) > 0.5:
+                # Определяем ожидаемый кегль для специальных случаев
+                if text.startswith("Условные обозначения:"):
+                    required_size_current = 12
+                else:
+                    required_size_current = required_size
+
+                if font_size and abs(font_size - required_size_current) > 0.5:
                     wrong_size_count += 1
                     if i - last_size_issue_para >= 3:
                         add_issue(
@@ -115,7 +124,7 @@ class FontsCheck(BaseCheck):
                             rule_id="font_size",
                             message=(
                                 f"Кегль {font_size:.0f} пт "
-                                f"(требуется {required_size} пт)"
+                                f"(требуется {required_size_current} пт)"
                             ),
                             severity=Severity.ERROR,
                             location_hint=f"~абз. {i+1}",
