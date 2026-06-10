@@ -22,7 +22,6 @@ ALIGN_CODES = {
 }
 
 TABLE_NUMBER_RE = re.compile(r"^Таблица\s+\d+\s*$")
-FIGURE_CAPTION_RE = re.compile(r"^Рис\.\s+\d+\.")
 
 
 class AlignmentCheck(BaseCheck):
@@ -37,13 +36,18 @@ class AlignmentCheck(BaseCheck):
         table_cap_align = ALIGN_CODES[rules["table_caption_title"]]
         fig_cap_align = ALIGN_CODES[rules["figure_caption"]]
 
+        # Регулярное выражение для подписи рисунка – берём из конфигурации
+        figure_pattern_str = self.rules["captions"]["figure_pattern"]
+        figure_caption_re = re.compile(figure_pattern_str)
+
         in_main_text = False
         last_issue = -10
         # После строки "Таблица N" следующий параграф — название таблицы
         next_is_table_title = False
 
         for i, para in enumerate(model.paragraphs):
-            text = para.text.strip()
+            # Нормализуем неразрывные пробелы для единообразной проверки
+            text = para.text.strip().replace("\u00A0", " ")
 
             if re.match(r"^Введение$", text, re.IGNORECASE):
                 in_main_text = True
@@ -56,6 +60,27 @@ class AlignmentCheck(BaseCheck):
 
             actual_align_str = resolver.get_alignment(para)
             actual_align = ALIGN_CODES.get(actual_align_str)
+            # Исключения из rules.yaml
+            matched_exception = False
+
+            for exc in self.rules.get("alignment_exceptions", []):
+                if re.match(exc["pattern"], text, re.IGNORECASE):
+                    expected_align = ALIGN_CODES[exc["expected"]]
+
+                    self._check_align(
+                        result,
+                        i,
+                        para,
+                        actual_align,
+                        expected_align,
+                        exc.get("label", "исключение"),
+                    )
+
+                    matched_exception = True
+                    break
+
+            if matched_exception:
+                continue
 
             # Строка "Таблица N"
             if TABLE_NUMBER_RE.match(text):
@@ -73,8 +98,8 @@ class AlignmentCheck(BaseCheck):
 
             next_is_table_title = False
 
-            # Подпись рисунка
-            if FIGURE_CAPTION_RE.match(text):
+            # Подпись рисунка (используем pattern из конфигурации)
+            if figure_caption_re.match(text):
                 self._check_align(result, i, para, actual_align,
                                   fig_cap_align, "подпись рисунка")
                 continue
@@ -97,7 +122,6 @@ class AlignmentCheck(BaseCheck):
                                 f"(требуется по ширине)"
                             ),
                             severity=Severity.WARNING,
-                            location_hint=f"~абз. {i+1}",
                             context=text[:80],
                         )
                         last_issue = i
@@ -115,11 +139,12 @@ class AlignmentCheck(BaseCheck):
                     f"(требуется «{ALIGN_NAMES.get(expected)}»)"
                 ),
                 severity=Severity.ERROR,
-                location_hint=f"~абз. {i+1}",
                 context=para.text[:80],
             )
 
-def is_real_heading_for_alignment(text: str, para) -> bool:
+
+def is_real_heading_for_alignment(text: str) -> bool:
+    """Проверяет, является ли текст заголовком по своему содержанию."""
     if re.match(r"^Глава\s+\d+", text):
         return True
     if re.match(r"^\d+\.\d+(\.\d+)*\.", text):
@@ -138,6 +163,7 @@ def is_real_heading_for_alignment(text: str, para) -> bool:
 
 
 def is_numbered_paragraph(para) -> bool:
+    """Проверяет, есть ли у параграфа нумерация (маркированный/нумерованный список)."""
     pPr = para._p.find(qn("w:pPr"))
     if pPr is None:
         return False
@@ -145,6 +171,7 @@ def is_numbered_paragraph(para) -> bool:
 
 
 def is_heading_for_alignment(text: str, para, resolver) -> bool:
+    """Определяет, является ли параграф заголовком для целей проверки выравнивания."""
     if is_real_heading_for_alignment(text):
         return True
 

@@ -68,7 +68,6 @@ class IndentsCheck(BaseCheck):
                             f"(должно быть 0)"
                         ),
                         severity=Severity.ERROR,
-                        location_hint=f"~абз. {i+1}",
                         context=text[:80],
                     )
                 next_is_table_title = False
@@ -85,7 +84,6 @@ class IndentsCheck(BaseCheck):
                             f"(должно быть 0)"
                         ),
                         severity=Severity.ERROR,
-                        location_hint=f"~абз. {i+1}",
                         context=text[:80],
                     )
                 next_is_appendix_title = False
@@ -110,7 +108,6 @@ class IndentsCheck(BaseCheck):
                             f"(должно быть 0)"
                         ),
                         severity=Severity.ERROR,
-                        location_hint=f"~абз. {i + 1}",
                         context=text[:80],
                     )
                 # Заголовки больше не проверяем, переходим к следующему абзацу
@@ -127,7 +124,6 @@ class IndentsCheck(BaseCheck):
                             f"(должно быть 0)"
                         ),
                         severity=Severity.ERROR,
-                        location_hint=f"~абз. {i + 1}",
                         context=text[:80],
                     )
                 continue
@@ -137,6 +133,31 @@ class IndentsCheck(BaseCheck):
                 continue
 
             # Основной текст — отступ 1.25 см
+            # Исключения из rules.yaml
+            matched_exception = False
+
+            for exc in self.rules.get("indent_exceptions", []):
+                if re.match(exc["pattern"], text, re.IGNORECASE):
+
+                    expected_indent = exc["expected_indent"]
+
+                    if abs(indent - expected_indent) > tol:
+                        add_issue(
+                            result,
+                            rule_id="indent_exception",
+                            message=(
+                                f"{exc['label']}: красная строка "
+                                f"{indent:.2f} см (требуется {expected_indent:.2f} см)"
+                            ),
+                            severity=Severity.ERROR,
+                            context=text[:80],
+                        )
+
+                    matched_exception = True
+                    break
+
+            if matched_exception:
+                continue
             if abs(indent - body_indent) > tol:
                 if i - last_issue_para >= 5:
                     add_issue(
@@ -147,7 +168,6 @@ class IndentsCheck(BaseCheck):
                             f"(требуется {body_indent} см)"
                         ),
                         severity=Severity.WARNING,
-                        location_hint=f"~абз. {i + 1}",
                         context=text[:80],
                     )
                     last_issue_para = i

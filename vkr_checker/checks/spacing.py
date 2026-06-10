@@ -2,7 +2,7 @@
 from __future__ import annotations
 import re
 from .base import BaseCheck, CheckResult, Severity, add_issue
-from .fonts import is_heading_paragraph, para_is_in_table
+from .fonts import para_is_in_table
 
 
 class SpacingCheck(BaseCheck):

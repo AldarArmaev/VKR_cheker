@@ -28,6 +28,8 @@ THEME_FONT_MAP = {
     "+mnCS": "Calibri",              # minor complex script
 }
 
+DEFAULT_FONT_SIZE_PT = 14.0
+DEFAULT_LINE_SPACING = 1.5
 
 class StyleResolver:
     """Кэшированный резолвер стилей для одного документа."""
@@ -66,7 +68,6 @@ class StyleResolver:
         return self._defaults.get("font_name")
 
     def get_font_size_pt(self, run: Run, para: Paragraph) -> float | None:
-        """Возвращает размер шрифта в пунктах."""
         # 1. Прямое форматирование run
         if run.font.size:
             return run.font.size.pt
@@ -78,14 +79,31 @@ class StyleResolver:
                 return style.font.size.pt
             style = style.base_style
 
-        # 3. Дефолты документа
+        # 3. Явная проверка стиля "Normal"
+        try:
+            normal = self._doc.styles["Normal"]
+            if normal.font.size:
+                return normal.font.size.pt
+            # Если через атрибут не получилось – лезем в XML
+            sz_elem = normal._element.find(f".//{{{_NS}}}sz")
+            if sz_elem is not None and sz_elem.get(f"{{{_NS}}}val"):
+                half_pt = int(sz_elem.get(f"{{{_NS}}}val"))
+                return half_pt / 2.0
+        except (KeyError, AttributeError):
+            pass
+
+        # 4. Document defaults
         sz_val = self._defaults.get("font_size_half_pt")
-        return sz_val / 2 if sz_val else None
+        if sz_val:
+            return sz_val / 2.0
+
+        # 5. Абсолютный дефолт
+        return DEFAULT_FONT_SIZE_PT
 
     def get_line_spacing(self, para: Paragraph) -> float | None:
         """
         Возвращает межстрочный интервал как множитель (1.0, 1.5, 2.0).
-        None если не удалось определить.
+        Для exact/atLeast возвращает None (требуется ручная проверка).
         """
         pPr = para._p.find(qn("w:pPr"))
         if pPr is None:
@@ -99,27 +117,49 @@ class StyleResolver:
         rule = spacing.get(qn("w:lineRule"))
 
         if rule in ("auto", None) and line:
-            # "auto" = proportional, 240 = single, 360 = 1.5x, 480 = double
+            # 240 = 1.0
             return round(int(line) / 240, 2)
-        # "exact" / "atLeast" — абсолютное значение, не сравниваем как множитель
+        # Для exact/atLeast возвращаем None, чтобы вызвать предупреждение в tables.py
         return None
 
     def get_first_line_indent_cm(self, para: Paragraph) -> float:
-        """Возвращает отступ первой строки в сантиметрах."""
+        """Возвращает отступ первой строки в сантиметрах с учётом стилей."""
+
+        def read_indent_from_ppr(pPr):
+            if pPr is None:
+                return None
+            ind = pPr.find(qn("w:ind"))
+            if ind is None:
+                return None
+
+            first_line = ind.get(qn("w:firstLine"))
+            hanging = ind.get(qn("w:hanging"))
+
+            if first_line is not None:
+                return round(int(first_line) / 566.929, 3)
+
+            if hanging is not None:
+                return -round(int(hanging) / 566.929, 3)
+
+            return None
+
+        # 1. Прямое форматирование абзаца
         pPr = para._p.find(qn("w:pPr"))
-        if pPr is None:
-            return 0.0
+        value = read_indent_from_ppr(pPr)
+        if value is not None:
+            return value
 
-        ind = pPr.find(qn("w:ind"))
-        if ind is None:
-            return 0.0
+        # 2. Форматирование из стиля абзаца
+        style = para.style
+        while style:
+            pPr = style._element.find(qn("w:pPr"))
+            value = read_indent_from_ppr(pPr)
+            if value is not None:
+                return value
+            style = style.base_style
 
-        first_line = ind.get(qn("w:firstLine"))
-        if first_line is None:
-            return 0.0
-
-        # Twips → cm: 1 twip = 1/567 cm (точнее: 1 inch = 1440 twips = 2.54 cm)
-        return round(int(first_line) / 566.929, 3)
+        # 3. Если нигде не найдено
+        return 0.0
 
     def is_bold(self, run: Run, para: Paragraph | None = None) -> bool:
         """
@@ -254,7 +294,7 @@ class StyleResolver:
         return defaults
 
     def _get_style_spacing(self, para: Paragraph) -> float | None:
-        """Читает spacing из цепочки стилей."""
+        """Ищет spacing в цепочке стилей, включая Normal."""
         style = para.style
         while style:
             if style._element is not None:
@@ -267,8 +307,22 @@ class StyleResolver:
                         if rule in ("auto", None) and line:
                             return round(int(line) / 240, 2)
             style = style.base_style
-        # Если в стилях не найдено, пробуем взять из document defaults
-        return self._defaults.get("line_spacing")
+
+        # Fallback на стиль Normal
+        try:
+            normal = self._doc.styles["Normal"]
+            pPr_normal = normal._element.find(f".//{{{_NS}}}pPr")
+            if pPr_normal is not None:
+                spacing = pPr_normal.find(f"{{{_NS}}}spacing")
+                if spacing is not None:
+                    line = spacing.get(f"{{{_NS}}}line")
+                    rule = spacing.get(f"{{{_NS}}}lineRule")
+                    if rule in ("auto", None) and line:
+                        return round(int(line) / 240, 2)
+        except (KeyError, AttributeError):
+            pass
+
+        return None
 
     def _get_style_alignment(self, para: Paragraph) -> str | None:
         """Читает выравнивание из цепочки стилей."""

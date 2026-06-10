@@ -11,13 +11,21 @@ class FiguresCheck(BaseCheck):
 
     def _run(self, model, resolver, result: CheckResult) -> None:
         rules_captions = self.rules["captions"]
-        figure_re = re.compile(rules_captions["figure_pattern"])
+        figure_pattern_str = rules_captions["figure_pattern"]
+        figure_prefix = rules_captions["figure_prefix"]
+        figure_re = re.compile(figure_pattern_str)
+
+        # Регулярное выражение для извлечения номера из подписи
+        # Ожидается, что номер идёт сразу после префикса и пробела, затем точка
+        # Пример: "Рис. 1. Название"
+        figure_number_re = re.compile(rf"^{re.escape(figure_prefix)}\s+(\d+)\.")
+
         figure_numbers_seen = []
-        figure_number_re = re.compile(r"^Рис\.\s+(\d+)\.")
 
         for i, para in enumerate(model.paragraphs):
-            text = para.text.strip()
-            if not text.startswith("Рис."):
+            # Нормализуем неразрывные пробелы
+            text = para.text.strip().replace("\u00A0", " ")
+            if not text.startswith(figure_prefix):
                 continue
 
             # Извлекаем номер
@@ -32,7 +40,7 @@ class FiguresCheck(BaseCheck):
                     rule_id="figure_caption_format",
                     message=(
                         "Неверный формат подписи рисунка. "
-                        "Должно быть: «Рис. N. Название» "
+                        f"Должно быть: «{figure_prefix} N. Название» "
                         "(с прописной буквы, без точки в конце)"
                     ),
                     severity=Severity.ERROR,
@@ -69,7 +77,7 @@ class FiguresCheck(BaseCheck):
                     rule_id="figure_numbering",
                     message=(
                         f"Нарушена сквозная нумерация рисунков: "
-                        f"ожидался Рис. {j+1}, найден Рис. {num}"
+                        f"ожидался {figure_prefix} {j+1}, найден {figure_prefix} {num}"
                     ),
                     severity=Severity.ERROR,
                 )
